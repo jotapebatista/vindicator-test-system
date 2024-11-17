@@ -36,12 +36,13 @@
 						transition-colors
 						hover="bg-emerald-600"
 						focus-visible="outline-2 outline-emerald-600 outline-offset-2 outline"
-						to="/commands"
+						to="/select-port"
 					>
 						Start Test
 					</NuxtLink>
 				</div>
 			</div>
+			<!-- <SerialPort /> -->
 		</div>
 
 		<div fixed bottom-6 text-sm absolute-center-h>
@@ -53,9 +54,18 @@
 </template>
 
 <script lang="ts" setup>
+	import { useRouter } from "vue-router";
+
 	const { name, author } = useConstants();
+	const router = useRouter();
 
 	definePageMeta({
 		layout: "home"
 	});
+
+	const startTest = () => {
+		router.push({
+			name: "start-test"
+		});
+	};
 </script>
