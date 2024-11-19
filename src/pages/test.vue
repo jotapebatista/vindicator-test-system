@@ -33,32 +33,25 @@
 					</div>
 				</div>
 
-				<!-- User Feedback -->
-				<div v-if="awaitingFeedback">
-					<p class="text-white font-semibold">
-						{{ currentPrompt }}
-					</p>
-					<div class="mt-2 flex gap-4">
-						<Btn @click="recordFeedback(true)">
-							Yes
-						</Btn>
-						<Btn @click="recordFeedback(false)">
-							No
-						</Btn>
-					</div>
-				</div>
-
 				<!-- Test Results -->
 				<div v-if="testFinished" class="mt-4">
 					<h3 class="text-lg text-white font-semibold">
 						Test Results:
 					</h3>
 					<pre class="rounded-md bg-gray-800 p-4 text-white">
-			  {{ JSON.stringify(testResults, null, 2) }}
-			</pre>
+						{{ JSON.stringify(testResults, null, 2) }}
+					</pre>
 				</div>
 			</div>
 		</div>
+
+		<!-- Feedback Modal -->
+		<FeedbackModal
+			v-if="awaitingFeedback"
+			:visible="awaitingFeedback"
+			:question="currentPrompt"
+			@respond="recordFeedback"
+		/>
 	</LayoutTile>
 </template>
 
@@ -70,52 +63,54 @@
 	const route = useRoute();
 	const devicePath = ref(route.query.path as string);
 
-	const testSteps = [
-		{
-			description: "Test RED LED",
-			commands: [
-				{ command: "CFF,00,00\r\nL1", type: "on" },
-				{ command: "L0", type: "off" },
-				{ command: "F0A,32", type: "flash" },
-				{ command: "L0", type: "off" }
-			],
-			prompts: ["Is the RED LED on?", "Is the RED LED flashing?"]
-		},
-		{
-			description: "Test GREEN LED",
-			commands: [
-				{ command: "C00,FF,00\r\nL1", type: "on" },
-				{ command: "L0", type: "off" },
-				{ command: "F0A,32", type: "flash" },
-				{ command: "L0", type: "off" }
-			],
-			prompts: ["Is the GREEN LED on?", "Is the GREEN LED flashing?"]
-		},
-		{
-			description: "Test BLUE LED",
-			commands: [
-				{ command: "C00,00,FF\r\nL1", type: "on" },
-				{ command: "L0", type: "off" },
-				{ command: "F0A,32", type: "flash" },
-				{ command: "L0", type: "off" }
-			],
-			prompts: ["Is the BLUE LED on?", "Is the BLUE LED flashing?"]
-		}
-	];
-
+	const testSteps = createTestSteps();
 	const currentStepIndex = ref(0);
 	const currentCommandIndex = ref(0);
-	const testResults = ref([]);
+	const testResults = ref<TestResult[]>([]);
 	const awaitingFeedback = ref(false);
 	const testFinished = ref(false);
+	const dipSwitchStatus = ref<string>("");
+	const awaitingDipSwitchFeedback = ref(false);
 
 	const currentTest = computed(() => testSteps[currentStepIndex.value]);
 	const currentCommand = computed(
 		() => currentTest.value.commands[currentCommandIndex.value]
 	);
-	const currentPrompt = computed(
-		() => currentTest.value.prompts[Math.floor(currentCommandIndex.value / 2)]
+	const currentPrompt = computed(() =>
+		getPrompt(currentTest.value, currentCommandIndex.value)
 	);
+
+	async function startTest() {
+		try {
+			await ensurePortOpen();
+			await executeCommandSequence(["S0", "R", "P0"]);
+			await executeNextCommand();
+		} catch (error) {
+			console.error("Error during test sequence:", error);
+		}
+	}
+
+	async function ensurePortOpen() {
+		try {
+			await invoke("open_port", { path: devicePath.value });
+			console.log("Port opened successfully.");
+		} catch (error: any) {
+			if (error.includes("already open")) {
+				await invoke("close_port", { path: devicePath.value });
+				await invoke("open_port", { path: devicePath.value });
+				console.log("Reopened port. Proceeding...");
+			} else {
+				throw new Error(`Failed to open port: ${error}`);
+			}
+		}
+	}
+
+	async function executeCommandSequence(commands: string[]) {
+		for (const command of commands) {
+			const response = await sendCommand(command);
+			console.log(response);
+		}
+	}
 
 	async function sendCommand(command: string) {
 		try {
@@ -126,34 +121,40 @@
 			return res;
 		} catch (error) {
 			console.error("Error sending command:", error);
+			throw error;
 		}
 	}
 
 	async function executeNextCommand() {
 		const command = currentCommand.value.command;
-		const res = await sendCommand(command);
-		console.log(res);
+		console.log(command);
 
-		if (currentCommandIndex.value % 2 === 0) {
+		await sendCommand(command);
+
+		if (command.includes("R") || command.includes("r")) {
+			await handleDipSwitches();
+		}
+
+		if (isAwaitingFeedback(currentCommandIndex.value)) {
 			awaitingFeedback.value = true;
 		} else {
 			moveToNextCommand();
 		}
 	}
 
-	function moveToNextCommand() {
-		if (currentCommandIndex.value < currentTest.value.commands.length - 1) {
-			currentCommandIndex.value += 1;
-		} else if (currentStepIndex.value < testSteps.length - 1) {
-			currentCommandIndex.value = 0;
-			currentStepIndex.value += 1;
-		} else {
-			testFinished.value = true;
+	async function handleDipSwitches() {
+		const response = await sendCommand("R");
+		const dipSwitches = parseDipSwitchStatus(response);
+		dipSwitchStatus.value = dipSwitches;
+		awaitingDipSwitchFeedback.value = true;
+	}
+
+	function parseDipSwitchStatus(response: string): string {
+		const match = response.match(/.*,(.*?),.*$/);
+		if (match && match[1]) {
+			return match[1]; // Extracts the DIP switch status
 		}
-		awaitingFeedback.value = false;
-		if (!testFinished.value) {
-			executeNextCommand();
-		}
+		return "";
 	}
 
 	function recordFeedback(success: boolean) {
@@ -166,35 +167,91 @@
 		moveToNextCommand();
 	}
 
-	async function startTest() {
-		try {
-			await invoke("open_port", { path: devicePath.value });
-			console.log("Port opened successfully.");
-		} catch (error) {
-			if (error.includes("already open")) {
-				await invoke("close_port", { path: devicePath.value });
-				await invoke("open_port", { path: devicePath.value });
-				console.log("Reopened port. Proceeding...");
-			} else {
-				console.error("Failed to open port:", error);
-				return;
-			}
+	function moveToNextCommand() {
+		if (currentCommandIndex.value < currentTest.value.commands.length - 1) {
+			currentCommandIndex.value++;
+		} else if (currentStepIndex.value < testSteps.length - 1) {
+			currentStepIndex.value++;
+			currentCommandIndex.value = 0;
+		} else {
+			testFinished.value = true;
 		}
-
-		try {
-			// Send initial commands and start the test
-			await sendCommand("S0");
-			const result = await sendCommand("R");
-			console.log(result);
-			// const initialData = await readData();
-			// console.log("Initial read:", initialData);
-			await executeNextCommand();
-		} catch (error) {
-			console.error("Error during test sequence:", error);
-		}
+		if (!testFinished.value)
+			executeNextCommand();
 	}
 
-	onMounted(async () => {
-		await startTest();
-	});
+	function isAwaitingFeedback(commandIndex: number): boolean {
+		return commandIndex % 2 === 0;
+	}
+
+	function getPrompt(test: TestStep, commandIndex: number): string {
+		return test.prompts[Math.floor(commandIndex / 2)];
+	}
+
+	function createTestSteps(): TestStep[] {
+		return [
+			// Main LED Tests
+			createTestStep("Test RED LED", "C02,00,00", [
+				"Is the RED LED on?",
+				"Is the RED LED flashing?"
+			]),
+			createTestStep("Test GREEN LED", "C00,02,00", [
+				"Is the GREEN LED on?",
+				"Is the GREEN LED flashing?"
+			]),
+			createTestStep("Test BLUE LED", "C00,00,02", [
+				"Is the BLUE LED on?",
+				"Is the BLUE LED flashing?"
+			]),
+
+			// DIP Switches Test Step
+			createTestStep("Test DIP Switches", "R", [
+				"Change DIP switch 1 to the opposite position and press Enter to continue.",
+
+				"Change DIP switch 2 to the opposite position and press Enter to continue.",
+
+				"Change DIP switch 3 to the opposite position and press Enter to continue.",
+
+				"Change DIP switch 4 to the opposite position and press Enter to continue.",
+
+				"Change DIP switch 5 to the opposite position and press Enter to continue."
+			])
+		];
+	}
+
+	function createTestStep(
+		description: string,
+		colorCommand: string,
+		prompts: string[]
+	): TestStep {
+		return {
+			description,
+			commands: [
+				{ command: `${colorCommand}\r\nL1`, type: "on" },
+				{ command: "L0", type: "off" },
+				{ command: "F0A,32", type: "flash" },
+				{ command: "L0", type: "off" }
+			],
+			prompts
+		};
+	}
+
+	onMounted(startTest);
+
+	interface Command {
+		command: string
+		type: "on" | "off" | "flash"
+	}
+
+	interface TestStep {
+		description: string
+		commands: Command[]
+		prompts: string[]
+	}
+
+	interface TestResult {
+		step: string
+		prompt: string
+		success: boolean
+	}
 </script>
