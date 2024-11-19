@@ -1,0 +1,4 @@
+	import { useRoute } from "vue-router";
+
+	const route = useRoute();
+	const devicePath = ref(route.query.path as string);

@@ -1,7 +1,7 @@
 <template>
 	<div>
-		<SiteNavbar class="fixed w-full" />
-		<SiteSidebar />
+		<!-- <SiteNavbar class="fixed w-full" /> -->
+		<!-- <SiteSidebar /> -->
 
 		<div relative overflow-hidden px-6 lg="px-8">
 			<DesignTopBlob />

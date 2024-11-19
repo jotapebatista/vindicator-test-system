@@ -31,7 +31,7 @@
 		"beforeDevCommand": "pnpm dev",
 		"devUrl": "http://localhost:3000"
 	},
-	"productName": "Nuxtor",
+	"productName": "Vindicator Test System",
 	"version": "1.0.0",
 	"identifier": "com.nicolaspadari.nuxtor",
 	"plugins": {
@@ -40,7 +40,7 @@
 	"app": {
 		"windows": [
 			{
-				"title": "Nuxtor",
+				"title": "Vindicator Test System",
 				"width": 1366,
 				"height": 768,
 				"minWidth": 375,

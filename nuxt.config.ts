@@ -65,10 +65,10 @@ export default defineNuxtConfig({
 	devServer: {
 		host: "0.0.0.0"
 	},
-	eslint: {
-		config: {
-			standalone: false
-		}
-	},
+	// eslint: {
+	// 	config: {
+	// 		standalone: false
+	// 	}
+	// },
 	compatibilityDate: "2024-10-01"
 });

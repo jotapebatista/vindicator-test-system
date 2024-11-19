@@ -1,70 +1,51 @@
 <template>
 	<LayoutTile
-		title="Device Progressive Test"
-		description="Test the connected USB RS232 device step by step."
+		title="Strobe LED Test Wizard"
+		description="Follow the steps to test the strobe LED device."
 	>
 		<div class="mx-auto max-w-xl lg:mr-0 lg:max-w-lg">
 			<div class="grid grid-cols-1 gap-x-8 gap-y-6">
-				<!-- Device Info Display -->
+				<!-- Device Info -->
 				<div>
-					<label block text-sm text-white font-semibold leading-6>Connected Device</label>
-					<div mt="2.5">
+					<label
+						class="block text-sm text-white font-semibold leading-6"
+					>
+						Connected Device
+					</label>
+					<div class="mt-2.5">
 						<p class="text-white">
 							<strong>Device:</strong> {{ devicePath }}
 						</p>
 					</div>
 				</div>
 
-				<!-- Current Test Step -->
+				<!-- Current Test -->
 				<div>
-					<label block text-sm text-white font-semibold leading-6>Current Test</label>
-					<div mt="2.5">
+					<label
+						class="block text-sm text-white font-semibold leading-6"
+					>
+						Current Test
+					</label>
+					<div class="mt-2.5">
 						<p class="text-white">
-							<strong>Step:</strong> {{ testSteps[currentTestStepIndex]?.description }}
+							<strong>Step:</strong> {{ currentTest.description }}
 						</p>
 					</div>
-					<div mt="2.5">
-						<p class="text-white">
-							<strong>Command:</strong> {{ testSteps[currentTestStepIndex]?.commands[currentCommandIndex]?.command }}
-							<strong>Parameters:</strong> {{ testSteps[currentTestStepIndex]?.commands[currentCommandIndex]?.parameters }}
-						</p>
-					</div>
-				</div>
-
-				<!-- Base Status Display -->
-				<div v-if="baseStatus">
-					<h3 class="text-lg text-white font-semibold">
-						Base Device Status:
-					</h3>
-					<pre class="rounded-md bg-gray-800 p-4 text-white">
-						{{ JSON.stringify(baseStatus, null, 2) }}
-					</pre>
 				</div>
 
 				<!-- User Feedback -->
 				<div v-if="awaitingFeedback">
 					<p class="text-white font-semibold">
-						Did the device respond correctly to the command:
-						<strong>{{ testSteps[currentTestStepIndex]?.commands[currentCommandIndex]?.command }}</strong>?
+						{{ currentPrompt }}
 					</p>
 					<div class="mt-2 flex gap-4">
-						<Btn @click="recordResult(true)">
+						<Btn @click="recordFeedback(true)">
 							Yes
 						</Btn>
-						<Btn @click="recordResult(false)">
+						<Btn @click="recordFeedback(false)">
 							No
 						</Btn>
 					</div>
-				</div>
-
-				<!-- Start/Next Test Button -->
-				<div v-else>
-					<Btn v-if="!testFinished" @click="startTest">
-						{{ testInProgress ? "Next Command" : "Start Test" }}
-					</Btn>
-					<Btn v-else class="bg-emerald-600" @click="saveTestResults">
-						Save Results
-					</Btn>
 				</div>
 
 				<!-- Test Results -->
@@ -73,8 +54,8 @@
 						Test Results:
 					</h3>
 					<pre class="rounded-md bg-gray-800 p-4 text-white">
-						{{ JSON.stringify(testResults, null, 2) }}
-					</pre>
+			  {{ JSON.stringify(testResults, null, 2) }}
+			</pre>
 				</div>
 			</div>
 		</div>
@@ -83,154 +64,137 @@
 
 <script lang="ts" setup>
 	import { invoke } from "@tauri-apps/api/core";
-	import { onMounted, ref } from "vue";
+	import { computed, onMounted, ref } from "vue";
 	import { useRoute } from "vue-router";
 
 	const route = useRoute();
+	const devicePath = ref(route.query.path as string);
 
-	// Test Steps Definition
-	interface TestCommand {
-		command: string
-		parameters: string
-		executeReadAfter?: boolean
-	}
-
-	interface TestStep {
-		description: string
-		commands: TestCommand[]
-	}
-
-	const testSteps: TestStep[] = [
+	const testSteps = [
 		{
-			description: "Check Base Device Status",
-			commands: [{ command: "R", parameters: "", executeReadAfter: false }]
-		},
-		{
-			description: "Turn LEDs On and Off",
+			description: "Test RED LED",
 			commands: [
-				{ command: "L", parameters: "1" },
-				{ command: "L", parameters: "0" }
-			]
+				{ command: "CFF,00,00\r\nL1", type: "on" },
+				{ command: "L0", type: "off" },
+				{ command: "F0A,32", type: "flash" },
+				{ command: "L0", type: "off" }
+			],
+			prompts: ["Is the RED LED on?", "Is the RED LED flashing?"]
 		},
 		{
-			description: "Test LED Set Selection",
+			description: "Test GREEN LED",
 			commands: [
-				{ command: "P", parameters: "0" },
-				{ command: "P", parameters: "1" }
-			]
+				{ command: "C00,FF,00\r\nL1", type: "on" },
+				{ command: "L0", type: "off" },
+				{ command: "F0A,32", type: "flash" },
+				{ command: "L0", type: "off" }
+			],
+			prompts: ["Is the GREEN LED on?", "Is the GREEN LED flashing?"]
 		},
 		{
-			description: "Test RGB Colors",
+			description: "Test BLUE LED",
 			commands: [
-				{ command: "C", parameters: "FF,00,00", executeReadAfter: true }, // Red
-				{ command: "C", parameters: "00,FF,00", executeReadAfter: true }, // Green
-				{ command: "C", parameters: "00,00,FF", executeReadAfter: true } // Blue
-			]
-		},
-		{
-			description: "Test Flash Function",
-			commands: [{ command: "F", parameters: "" }]
+				{ command: "C00,00,FF\r\nL1", type: "on" },
+				{ command: "L0", type: "off" },
+				{ command: "F0A,32", type: "flash" },
+				{ command: "L0", type: "off" }
+			],
+			prompts: ["Is the BLUE LED on?", "Is the BLUE LED flashing?"]
 		}
 	];
 
-	const baseStatus = ref({});
-	const devicePath = ref(route.query.path as string);
-	const currentTestStepIndex = ref(0);
+	const currentStepIndex = ref(0);
 	const currentCommandIndex = ref(0);
-	const testInProgress = ref(false);
+	const testResults = ref([]);
 	const awaitingFeedback = ref(false);
-	const testResults = ref<Record<string, any>[]>([]);
 	const testFinished = ref(false);
 
-	// Initialize Serial Port
-	const openPort = async () => {
-		try {
-			await invoke("open_port", { portName: devicePath.value });
-			console.log("Port opened successfully.");
-		} catch (error) {
-			console.error("Error opening port:", error);
-		}
-	};
+	const currentTest = computed(() => testSteps[currentStepIndex.value]);
+	const currentCommand = computed(
+		() => currentTest.value.commands[currentCommandIndex.value]
+	);
+	const currentPrompt = computed(
+		() => currentTest.value.prompts[Math.floor(currentCommandIndex.value / 2)]
+	);
 
-	// Run Next Command in Test Step
-	const runNextCommand = async () => {
-		const step = testSteps[currentTestStepIndex.value];
-		const command = step.commands[currentCommandIndex.value];
-
+	async function sendCommand(command: string) {
 		try {
-			// Send Command
-			const fullCommand = `${command.command}${command.parameters}\r\n`;
-			await invoke("write_to_port", {
-				portName: devicePath.value,
-				data: fullCommand
+			const res = await invoke("write_to_port", {
+				path: devicePath.value,
+				data: `${command}\r\n`
 			});
-
-			// Execute Read After Command, if applicable
-			if (command.executeReadAfter) {
-				const status = await invoke<string>("read_device_status", {
-					portName: devicePath.value
-				});
-				console.log(`Device Status after ${command.command}:`, status);
-				testResults.value.push({ command: "R", result: status });
-			}
-
-			// Log command execution
-			console.log(`Command sent: ${fullCommand}`);
-
-			// Move to next command or step
-			if (currentCommandIndex.value < step.commands.length - 1) {
-				currentCommandIndex.value += 1;
-			} else {
-				currentCommandIndex.value = 0;
-				if (currentTestStepIndex.value < testSteps.length - 1) {
-					currentTestStepIndex.value += 1;
-				} else {
-					testFinished.value = true;
-				}
-			}
+			return res;
 		} catch (error) {
 			console.error("Error sending command:", error);
-		} finally {
-			testInProgress.value = false;
 		}
-	};
+	}
 
-	// Start Test Step Execution
-	const startTest = () => {
-		if (testFinished.value)
-			return;
-		testInProgress.value = true;
-		runNextCommand();
-	};
+	async function executeNextCommand() {
+		const command = currentCommand.value.command;
+		const res = await sendCommand(command);
+		console.log(res);
 
-	// Record User Feedback
-	const recordResult = (success: boolean) => {
-		const step = testSteps[currentTestStepIndex.value];
+		if (currentCommandIndex.value % 2 === 0) {
+			awaitingFeedback.value = true;
+		} else {
+			moveToNextCommand();
+		}
+	}
+
+	function moveToNextCommand() {
+		if (currentCommandIndex.value < currentTest.value.commands.length - 1) {
+			currentCommandIndex.value += 1;
+		} else if (currentStepIndex.value < testSteps.length - 1) {
+			currentCommandIndex.value = 0;
+			currentStepIndex.value += 1;
+		} else {
+			testFinished.value = true;
+		}
+		awaitingFeedback.value = false;
+		if (!testFinished.value) {
+			executeNextCommand();
+		}
+	}
+
+	function recordFeedback(success: boolean) {
 		testResults.value.push({
-			description: step.description,
+			step: currentTest.value.description,
+			prompt: currentPrompt.value,
 			success
 		});
-
 		awaitingFeedback.value = false;
+		moveToNextCommand();
+	}
 
-		// Proceed to next step or finish
-		if (!testFinished.value) {
-			runNextCommand();
-		}
-	};
-
-	// Save Results to JSON File (or backend)
-	const saveTestResults = async () => {
+	async function startTest() {
 		try {
-			await invoke("save_results", { results: testResults.value });
-			alert("Test results saved successfully.");
+			await invoke("open_port", { path: devicePath.value });
+			console.log("Port opened successfully.");
 		} catch (error) {
-			console.error("Error saving results:", error);
+			if (error.includes("already open")) {
+				await invoke("close_port", { path: devicePath.value });
+				await invoke("open_port", { path: devicePath.value });
+				console.log("Reopened port. Proceeding...");
+			} else {
+				console.error("Failed to open port:", error);
+				return;
+			}
 		}
-	};
 
-	// Lifecycle
-	onMounted(() => {
-		openPort();
+		try {
+			// Send initial commands and start the test
+			await sendCommand("S0");
+			const result = await sendCommand("R");
+			console.log(result);
+			// const initialData = await readData();
+			// console.log("Initial read:", initialData);
+			await executeNextCommand();
+		} catch (error) {
+			console.error("Error during test sequence:", error);
+		}
+	}
+
+	onMounted(async () => {
+		await startTest();
 	});
 </script>
