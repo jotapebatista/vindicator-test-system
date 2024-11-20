@@ -7,13 +7,6 @@
 			"digestAlgorithm": "sha256",
 			"timestampUrl": ""
 		},
-		"icon": [
-			"icons/32x32.png",
-			"icons/128x128.png",
-			"icons/128x128@2x.png",
-			"icons/icon.icns",
-			"icons/icon.ico"
-		],
 		"resources": [],
 		"externalBin": [],
 		"copyright": "",
@@ -32,8 +25,8 @@
 		"devUrl": "http://localhost:3000"
 	},
 	"productName": "Vindicator Test System",
-	"version": "1.1.0",
-	"identifier": "com.nicolaspadari.nuxtor",
+	"version": "1.1.1",
+	"identifier": "com.jotapebatista.vindicator",
 	"plugins": {
 		"serialport": { "enabled": true }
 	},
@@ -41,10 +34,10 @@
 		"windows": [
 			{
 				"title": "Vindicator Test System",
-				"width": 1366,
-				"height": 768,
+				"width": 1280,
+				"height": 720,
 				"minWidth": 375,
-				"minHeight": 812,
+				"minHeight": 420,
 				"resizable": true,
 				"fullscreen": false
 			}

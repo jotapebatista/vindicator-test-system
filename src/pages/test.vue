@@ -3,9 +3,25 @@
 		title="Strobe LED Test Wizard"
 		description="Follow the steps to test the strobe LED device."
 	>
-		<div class="mx-auto max-w-xl lg:mr-0 lg:max-w-lg">
+		<div class="relative mx-auto max-w-xl lg:mr-0 lg:max-w-lg">
+			<!-- Always visible buttons -->
+			<div class="fixed bottom-4 right-4 z-50 space-x-2">
+				<button
+					class="rounded-md bg-blue-600 px-4 py-2 text-sm text-white font-semibold hover:bg-blue-700"
+					@click="restartTest"
+				>
+					Restart Test
+				</button>
+				<button
+					class="rounded-md bg-red-600 px-4 py-2 text-sm text-white font-semibold hover:bg-red-700"
+					@click="quitTest"
+				>
+					Quit Test
+				</button>
+			</div>
+
+			<!-- Device Info -->
 			<div class="grid grid-cols-1 gap-x-8 gap-y-6">
-				<!-- Device Info -->
 				<div>
 					<label
 						class="block text-sm text-white font-semibold leading-6"
@@ -58,9 +74,10 @@
 <script lang="ts" setup>
 	import { invoke } from "@tauri-apps/api/core";
 	import { computed, onMounted, ref } from "vue";
-	import { useRoute } from "vue-router";
+	import { useRoute, useRouter } from "vue-router";
 
 	const route = useRoute();
+	const router = useRouter();
 	const devicePath = ref(route.query.path as string);
 
 	const testSteps = createTestSteps();
@@ -69,8 +86,6 @@
 	const testResults = ref<TestResult[]>([]);
 	const awaitingFeedback = ref(false);
 	const testFinished = ref(false);
-	const dipSwitchStatus = ref<string>("");
-	const awaitingDipSwitchFeedback = ref(false);
 
 	const currentTest = computed(() => testSteps[currentStepIndex.value]);
 	const currentCommand = computed(
@@ -79,6 +94,21 @@
 	const currentPrompt = computed(() =>
 		getPrompt(currentTest.value, currentCommandIndex.value)
 	);
+
+	async function restartTest() {
+		currentStepIndex.value = 0;
+		currentCommandIndex.value = 0;
+		testResults.value = [];
+		testFinished.value = false;
+		awaitingFeedback.value = false;
+
+		startTest(); // Restart the test sequence
+	}
+
+	function quitTest() {
+		router.push("/select-port");
+		// console.log("Test quit.");
+	}
 
 	async function startTest() {
 		try {

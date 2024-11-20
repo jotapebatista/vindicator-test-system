@@ -85,7 +85,7 @@
 	const connectDevice = (device: string) => {
 		console.log(device);
 		router.push({
-			name: "test",
+			name: "test-device",
 			query: device
 		});
 	};
