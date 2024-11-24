@@ -2407,24 +2407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nuxtor"
-version = "1.0.0"
-dependencies = [
- "mio",
- "mio-serial",
- "serde",
- "serde_json",
- "serialport",
- "tauri",
- "tauri-build",
- "tauri-plugin-fs",
- "tauri-plugin-notification",
- "tauri-plugin-os",
- "tauri-plugin-serialplugin",
- "tauri-plugin-shell",
-]
-
-[[package]]
 name = "objc"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4622,6 +4604,24 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vindicator"
+version = "1.1.1"
+dependencies = [
+ "mio",
+ "mio-serial",
+ "serde",
+ "serde_json",
+ "serialport",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-fs",
+ "tauri-plugin-notification",
+ "tauri-plugin-os",
+ "tauri-plugin-serialplugin",
+ "tauri-plugin-shell",
+]
 
 [[package]]
 name = "vswhom"
