@@ -1,7 +1,7 @@
 <template>
 	<div>
-		<!-- <SiteNavbar sticky /> -->
-		<!-- <SiteSidebar /> -->
+		<SiteNavbar sticky />
+		<SiteSidebar />
 
 		<div crate>
 			<slot />

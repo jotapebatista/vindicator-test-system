@@ -5,28 +5,37 @@
 				{{ question }}
 			</h3>
 			<div class="flex justify-between gap-4">
-				<button class="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600" @click="onRespond(true)">
-					Yes
-				</button>
-				<button class="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600" @click="onRespond(false)">
-					No
-				</button>
+				<!-- Conditional Buttons -->
+				<template v-if="confirmBtn">
+					<button class="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600" @click="onRespond(true)">
+						Yes
+					</button>
+					<button class="rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600" @click="onRespond(false)">
+						No
+					</button>
+				</template>
+				<template v-else>
+					<button class="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600" @click="onRespond(true)">
+						Continue
+					</button>
+				</template>
 			</div>
 		</div>
 	</div>
 </template>
 
-  <script lang="ts" setup>
-	import { defineEmits, defineProps } from "vue";
+<script lang="ts" setup>
+import { defineEmits, defineProps } from "vue";
 
-	defineProps({
-		visible: Boolean,
-		question: String
-	});
+defineProps({
+	visible: Boolean,
+	question: String,
+	confirmBtn: Boolean,
+});
 
-	const emit = defineEmits(["respond"]);
+const emit = defineEmits(["respond"]);
 
-	function onRespond(response: boolean) {
-		emit("respond", response);
-	}
-  </script>
+function onRespond(response: boolean) {
+	emit("respond", response);
+}
+</script>

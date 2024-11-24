@@ -6,7 +6,7 @@
 					<SvgoLogo :font-controlled="false" size-8 />
 				</NuxtLink>
 			</div>
-			<div flex lg="hidden">
+			<!-- <div flex lg="hidden">
 				<button type="button" @click="showSidebar = true" inline-flex items-center justify-center rounded-md p-2.5 text-neutral-300 m="-2.5">
 					<Icon name="heroicons-solid:bars-3" size-6 />
 				</button>
@@ -29,7 +29,7 @@
 				<p text-sm text-white font-semibold leading-6>
 					v{{ tauriVersion }}
 				</p>
-			</div>
+			</div> -->
 		</nav>
 	</header>
 </template>

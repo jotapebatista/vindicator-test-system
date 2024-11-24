@@ -34,7 +34,7 @@
 					</button>
 				</div>
 			</div>
-			<p v-else class="text-sm text-gray-600 dark:text-gray-400">
+			<p v-else class="text-sm text-gray-300 dark:text-gray-400">
 				No USB devices found. Ensure a device is connected and try
 				again.
 			</p>
@@ -43,54 +43,61 @@
 </template>
 
 <script lang="ts" setup>
-	import { invoke } from "@tauri-apps/api/core";
-	import { onMounted, ref } from "vue";
-	import { useRouter } from "vue-router";
+import { invoke } from "@tauri-apps/api/core";
+import { onMounted, ref, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 
-	const devices = ref<{ name: string, path: string }[]>([]);
-	const router = useRouter();
+const devices = ref<{ name: string; path: string }[]>([]);
+const router = useRouter();
 
-	const getPortPrefix = () => {
-		const os = navigator.userAgent;
-		if (os.includes("Windows")) {
-			return "COM";
-		} else if (os.includes("Macintosh") || os.includes("Mac OS X")) {
-			return "/dev/cu";
-		} else if (os.includes("Linux")) {
-			return "/dev/tty";
+
+const getPortPrefix = () => {
+	const os = navigator.userAgent;
+	if (os.includes("Windows")) {
+		return "COM";
+	} else if (os.includes("Macintosh") || os.includes("Mac OS X")) {
+		return "/dev/cu";
+	} else if (os.includes("Linux")) {
+		return "/dev/tty";
+	}
+	return "";
+};
+
+const fetchUsbDevices = async () => {
+	try {
+		const portPrefix = getPortPrefix();
+		const allPorts = await invoke("list_ports");
+
+		if (allPorts && Array.isArray(allPorts)) {
+			devices.value = allPorts
+				.map((port: string) => ({
+					name: `Device ${port}`,
+					path: port,
+				}))
+				.filter((device) => device.path.startsWith(portPrefix));
+		} else {
+			console.warn("Unexpected data format for ports:", allPorts);
 		}
-		return "";
-	};
+	} catch (error) {
+		console.error("Failed to scan ports:", error);
+	}
+};
 
-	const fetchUsbDevices = async () => {
-		try {
-			const portPrefix = getPortPrefix();
-			const allPorts = await invoke("list_ports");
-
-			if (allPorts && Array.isArray(allPorts)) {
-				devices.value = allPorts
-					.map((port: string) => ({
-						name: `Device ${port}`, // Placeholder for device name
-						path: port
-					}))
-					.filter((device) => device.path.startsWith(portPrefix));
-			} else {
-				console.warn("Unexpected data format for ports:", allPorts);
-			}
-		} catch (error) {
-			console.error("Failed to scan ports:", error);
-		}
-	};
-
-	const connectDevice = (device: string) => {
-		console.log(device);
-		router.push({
-			name: "test-device",
-			query: device
-		});
-	};
-
-	onMounted(() => {
-		fetchUsbDevices();
+const connectDevice = (device: string) => {
+	console.log(device);
+	router.push({
+		name: "test-device",
+		query: device,
 	});
+};
+
+onMounted(() => {
+	fetchUsbDevices();
+	// console.log(currentPlatform, currentArch, currentVersion, currentLocale);
+	const intervalId = setInterval(fetchUsbDevices, 2000);
+
+	onUnmounted(() => {
+		clearInterval(intervalId);
+	});
+});
 </script>

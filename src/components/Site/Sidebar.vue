@@ -10,11 +10,11 @@
 						<NuxtLink to="/" p-1.5 m="-1.5">
 							<SvgoLogo :filled="true" :font-controlled="false" size-8 />
 						</NuxtLink>
-						<button type="button" rounded-md p-2.5 text-neutral-300 m="2.5" @click="showSidebar = false">
+						<!-- <button type="button" rounded-md p-2.5 text-neutral-300 m="2.5" @click="showSidebar = false">
 							<Icon name="heroicons-solid:x-mark" size-6 />
-						</button>
+						</button> -->
 					</div>
-					<div mt-6 flow-root>
+					<!-- <div mt-6 flow-root>
 						<div my="-6" divide-y divide="gray-500/25">
 							<div py-6 space-y-2>
 								<NavLink to="/commands">
@@ -36,7 +36,7 @@
 								</p>
 							</div>
 						</div>
-					</div>
+					</div> -->
 				</div>
 			</div>
 		</div>
