@@ -571,14 +571,7 @@ async function startTest() {
 
 		await sendCommand(DeviceCommands.SET_LED_STATE + 0);
 		testCompleted.value = true;
-
-		await invoke("send_raster_command", {
-			ip: "brother1.bstuff"
-		});
-
 		
-
-		console.log(testReport);
 		if (testPassed.value) await printLabel(testReport.gdSnr);
 	} catch (error) {
 		console.error("Error during test:", error);
