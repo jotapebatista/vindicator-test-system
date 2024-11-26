@@ -571,10 +571,38 @@ async function startTest() {
 
 		await sendCommand(DeviceCommands.SET_LED_STATE + 0);
 		testCompleted.value = true;
+
+		await invoke("send_raster_command", {
+			ip: "brother1.bstuff"
+		});
+
+		
+
 		console.log(testReport);
-		if (!testPassed.value) console.log("All tests passed!");
+		if (testPassed.value) await printLabel(testReport.gdSnr);
 	} catch (error) {
 		console.error("Error during test:", error);
+	}
+}
+
+async function printLabel(gdSnr:string) {
+	try {
+		const response = await fetch("http://192.168.40.73:5500/print", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ text: gdSnr }), 
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to print label: ${response.statusText}`);
+		}
+
+		const data = await response.json();
+		console.log("Label printed successfully:", data);
+	} catch (error) {
+		console.error("Error printing sticker:", error);
 	}
 }
 

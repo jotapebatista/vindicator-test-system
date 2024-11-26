@@ -11,10 +11,10 @@ const DEFAULT_TTY: &str = "COM6";
 const DEFAULT_BAUD: u32 = 9600;
 const SERIAL_TOKEN: Token = Token(0);
 
-// Constants for buffer and retries
 const DEFAULT_BUFFER_SIZE: usize = 1024;
-const DEFAULT_RETRY_DELAY: u64 = 100; // in milliseconds
+const DEFAULT_RETRY_DELAY: u64 = 100; 
 const MAX_RETRIES: usize = 10;
+
 
 #[command]
 fn list_ports() -> Result<Vec<String>, String> {
@@ -83,6 +83,8 @@ fn write_to_port(path: String, data: String) -> Result<String, String> {
 
     Err("Failed to receive complete response within retry limit.".to_string())
 }
+
+
 
 fn main() {
     tauri::Builder::default()
