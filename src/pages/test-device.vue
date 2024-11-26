@@ -580,7 +580,7 @@ async function startTest() {
 
 async function printLabel(gdSnr:string) {
 	try {
-		const response = await fetch("http://192.168.40.73:5500/print", {
+		const response = await fetch("https://top-dane-clearly.ngrok-free.app/print", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
