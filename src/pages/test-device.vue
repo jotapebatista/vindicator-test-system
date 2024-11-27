@@ -187,7 +187,12 @@
 import { ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useRoute } from "vue-router";
-import { test } from "@antfu/eslint-config";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = "https://ovdfpudapxwepuqduarw.supabase.co";
+const supabaseKey =
+	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ZGZwdWRhcHh3ZXB1cWR1YXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg0ODMyNDIsImV4cCI6MjA0NDA1OTI0Mn0.kB73oYm-aKr_ZyR7NMdkZSC4fURgkBU_oMH9UQWsss0";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface LedStatus {
 	on: boolean;
@@ -571,22 +576,53 @@ async function startTest() {
 
 		await sendCommand(DeviceCommands.SET_LED_STATE + 0);
 		testCompleted.value = true;
-		
-		if (testPassed.value) await printLabel(testReport.gdSnr);
+
+		const saveSuccess = await saveTestReport();
+		if (saveSuccess && Object.values(testPassed.value).every(Boolean)) {
+			await printLabel(GDSnrInTest.value);
+		}
 	} catch (error) {
 		console.error("Error during test:", error);
 	}
 }
 
-async function printLabel(gdSnr:string) {
+async function saveTestReport() {
 	try {
-		const response = await fetch("https://top-dane-clearly.ngrok-free.app/print", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ text: gdSnr }), 
+		const { error } = await supabase.from("test_reports").insert({
+			gd_snr: testReport.gdSnr,
+			leds: testReport.leds,
+			dip_switches: testReport.dipSwitches,
+			ctrl_signals: testReport.ctrlSignal,
+			door_signal: testReport.doorSignal,
+			base_readings: testReport.baseReadings,
+			test_passed: Object.values(testPassed.value).every(Boolean),
 		});
+
+		if (error) {
+			console.error("Error saving test report:", error.message);
+			return false;
+		}
+
+		console.log("Test report saved successfully.");
+		return true;
+	} catch (err) {
+		console.error("Unexpected error saving test report:", err);
+		return false;
+	}
+}
+
+async function printLabel(gdSnr: string) {
+	try {
+		const response = await fetch(
+			"https://top-dane-clearly.ngrok-free.app/print",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ text: gdSnr }),
+			}
+		);
 
 		if (!response.ok) {
 			throw new Error(`Failed to print label: ${response.statusText}`);

@@ -1,7 +1,7 @@
 {
 	"bundle": {
 		"active": true,
-		"targets": "all",
+		"targets": ["msi"],
 		"windows": {
 			"certificateThumbprint": null,
 			"digestAlgorithm": "sha256",
@@ -19,11 +19,7 @@
 		"copyright": "",
 		"category": "DeveloperTool",
 		"shortDescription": "",
-		"longDescription": "",
-		"macOS": {},
-		"linux": {
-			"deb": {}
-		}
+		"longDescription": ""
 	},
 	"build": {
 		"beforeBuildCommand": "pnpm generate",

@@ -19,7 +19,7 @@
 		"bump": "bumpp",
 		"tauri": "tauri",
 		"tauri:dev": "tauri dev",
-		"tauri:build": "tauri build --debug",
+		"tauri:build": "tauri build",
 		"tauri:build:debug": "tauri build --debug"
 	},
 	"dependencies": {
@@ -36,6 +36,7 @@
 		"@antfu/eslint-config": "^3.7.3",
 		"@nuxt/eslint": "^0.5.7",
 		"@nuxt/icon": "^1.5.5",
+		"@nuxtjs/supabase": "^1.4.3",
 		"@tauri-apps/cli": ">=2.0.2",
 		"@unocss/eslint-plugin": "^0.63.4",
 		"@unocss/nuxt": "^0.63.4",
