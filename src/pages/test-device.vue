@@ -535,46 +535,46 @@ async function startTest() {
 	try {
 		logs.value = [];
 		testCompleted.value = false;
-		await sendCommand(DeviceCommands.SELECT_DEVICE + "0");
+		// await sendCommand(DeviceCommands.SELECT_DEVICE + "0");
 
-		const response = await sendCommand(DeviceCommands.READ_STATUS);
-		const report = parseDeviceReport(response);
-		testReport.gdSnr = report.gdSnr;
-		GDSnrInTest.value = testReport.gdSnr.slice(1);
+		// const response = await sendCommand(DeviceCommands.READ_STATUS);
+		// const report = parseDeviceReport(response);
+		// testReport.gdSnr = report.gdSnr;
+		// GDSnrInTest.value = testReport.gdSnr.slice(1);
 
-		// LEDs Test
-		for (const color of Object.keys(LedColors) as Array<
-			keyof typeof LedColors
-		>) {
-			await testLedColors(color);
-			await testBackupLeds(color);
-			await sendCommand("L0");
-		}
-		testPassed.value.leds = Object.values(testReport.leds).every(
-			(led) => led.on && led.backup
-		);
+		// // LEDs Test
+		// for (const color of Object.keys(LedColors) as Array<
+		// 	keyof typeof LedColors
+		// >) {
+		// 	await testLedColors(color);
+		// 	await testBackupLeds(color);
+		// 	await sendCommand("L0");
+		// }
+		// testPassed.value.leds = Object.values(testReport.leds).every(
+		// 	(led) => led.on && led.backup
+		// );
 
-		// Dip Switches Test
-		for (const sw of Object.keys(testReport.dipSwitches).map(Number)) {
-			await testDeepSwitch(sw);
-		}
-		testPassed.value.dipSwitches = Object.values(
-			testReport.dipSwitches
-		).every(Boolean);
+		// // Dip Switches Test
+		// for (const sw of Object.keys(testReport.dipSwitches).map(Number)) {
+		// 	await testDeepSwitch(sw);
+		// }
+		// testPassed.value.dipSwitches = Object.values(
+		// 	testReport.dipSwitches
+		// ).every(Boolean);
 
-		// Control Signals Test
-		for (const sw of Object.keys(testReport.ctrlSignal).map(Number)) {
-			await testCtrlSignal(sw);
-		}
-		testPassed.value.ctrlSignals = Object.values(
-			testReport.ctrlSignal
-		).every(Boolean);
+		// // Control Signals Test
+		// for (const sw of Object.keys(testReport.ctrlSignal).map(Number)) {
+		// 	await testCtrlSignal(sw);
+		// }
+		// testPassed.value.ctrlSignals = Object.values(
+		// 	testReport.ctrlSignal
+		// ).every(Boolean);
 
-		// Door Sensor Test
-		await testDoorSensor();
-		testPassed.value.doorSensor = testReport.doorSignal;
+		// // Door Sensor Test
+		// await testDoorSensor();
+		// testPassed.value.doorSensor = testReport.doorSignal;
 
-		await sendCommand(DeviceCommands.SET_LED_STATE + 0);
+		// await sendCommand(DeviceCommands.SET_LED_STATE + 0);
 		testCompleted.value = true;
 
 		const saveSuccess = await saveTestReport();

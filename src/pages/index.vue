@@ -46,26 +46,15 @@
 		</div>
 
 		<div fixed bottom-6 text-sm absolute-center-h>
-			<p text-sm text-neutral-500>
-				Made by {{ author }}
-			</p>
+			<p text-sm text-neutral-500>Made by {{ author }}</p>
 		</div>
 	</div>
 </template>
 
 <script lang="ts" setup>
-	import { useRouter } from "vue-router";
+const { name, author } = useConstants();
 
-	const { name, author } = useConstants();
-	const router = useRouter();
-
-	definePageMeta({
-		layout: "home"
-	});
-
-	const startTest = () => {
-		router.push({
-			name: "start-test"
-		});
-	};
+definePageMeta({
+	layout: "home",
+});
 </script>
