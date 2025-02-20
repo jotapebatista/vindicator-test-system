@@ -20,7 +20,7 @@ version = "2.0.1"
 features = [ ]
 
 [dependencies]
-tauri-plugin-shell = "2.0.1"
+tauri-plugin-shell = "2"
 tauri-plugin-notification = "2.0.1"
 tauri-plugin-os = "2.0.1"
 tauri-plugin-fs = "2.0.1"
@@ -29,7 +29,9 @@ tauri-plugin-serialplugin = "2.3.0"
 serialport = "4.6.0"
 mio = "0.8"
 mio-serial = "5.0.5"
-ptouch = "0.2.2"
+log = "0.4.25"
+env_logger = "0.11.6"
+thiserror = "2.0.11"
 
 [dependencies.tauri]
 version = "2.0.2"

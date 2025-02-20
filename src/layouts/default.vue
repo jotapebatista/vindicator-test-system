@@ -4,6 +4,8 @@
 		<SiteSidebar />
 
 		<div crate>
+			<DesignTopBlob />
+			<DesignBottomBlob />
 			<slot />
 		</div>
 	</div>

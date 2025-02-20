@@ -166,8 +166,6 @@
 				:confirmBtn="isQuestion"
 				@respond="handleFeedback"
 			/>
-
-			<!-- Fixed action buttons -->
 			<div
 				v-if="GDSnrInTest"
 				class="fixed bottom-4 right-4 z-50 space-x-2"
@@ -184,7 +182,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useRoute } from "vue-router";
 import { createClient } from "@supabase/supabase-js";
@@ -193,6 +190,11 @@ const supabaseUrl = "https://ovdfpudapxwepuqduarw.supabase.co";
 const supabaseKey =
 	"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92ZGZwdWRhcHh3ZXB1cWR1YXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg0ODMyNDIsImV4cCI6MjA0NDA1OTI0Mn0.kB73oYm-aKr_ZyR7NMdkZSC4fURgkBU_oMH9UQWsss0";
 const supabase = createClient(supabaseUrl, supabaseKey);
+const LED_CURRENT_THRESHOLDS: Record<keyof typeof LedColors, { min: number; max: number }> = {
+    RED:    { min: 100, max: 150 },  
+    GREEN:  { min: 130, max: 170 },
+    BLUE:   { min: 150, max: 210 },
+};
 
 interface LedStatus {
 	on: boolean;
@@ -364,84 +366,95 @@ function parseDeviceReport(response: string) {
 	}
 }
 
-/* ---- Test Flow Functions ---- */
+/* ---- Test Functions ---- */
 async function testLedColors(color: keyof typeof LedColors) {
-	try {
-		await sendCommand(LedColors[color]);
-		await sendCommand("L1");
-		const response = await showFeedback(`Is the ${color} LED on?`);
-		const statusResponse = await sendCommand(DeviceCommands.READ_STATUS);
-		const parsedReport = parseDeviceReport(statusResponse);
+    try {
+        await Promise.all([
+            sendCommand(LedColors[color]),
+            sendCommand("L1"),
+        ]);
 
-		testReport.leds[color] = {
-			...testReport.leds[color],
-			on: response,
-			current: parsedReport.baseReadings.current,
-			power: parsedReport.baseReadings.capacitorVoltage,
-		};
-	} catch (error) {
-		console.error(`Error testing ${color} LED:`, error);
-	}
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const statusResponse = await sendCommand(DeviceCommands.READ_STATUS);
+        const parsedReport = parseDeviceReport(statusResponse);
+
+        const currentReading = parsedReport.baseReadings.current;
+
+        const { min, max } = LED_CURRENT_THRESHOLDS[color];
+
+        const isLedOn = currentReading >= min && currentReading <= max;
+
+        testReport.leds[color] = {
+            ...testReport.leds[color],
+            on: isLedOn,
+            current: currentReading,
+            power: parsedReport.baseReadings.capacitorVoltage,
+        };
+		console.log(`LED ${color} test result: ${isLedOn ? "ON" : "OFF"} (Current: ${currentReading}mA)`);
+    } catch (error) {
+        console.error(`Error testing ${color} LED:`, error);
+    }
 }
+
 
 async function testBackupLeds(color: keyof typeof LedColors) {
 	try {
-		await sendCommand(LedColors[color]);
-		await sendCommand("L1");
-		await sendCommand("P1");
-		const response = await showFeedback(`Is the Backup ${color} LED on?`);
+
+		await Promise.all([
+            sendCommand(LedColors[color]),
+            sendCommand("L1"),
+			await sendCommand("P1")
+        ]);
+
+		// const response = await showFeedback(`Is the Backup ${color} LED on?`);
+		const statusResponse = await sendCommand(DeviceCommands.READ_STATUS);
+        const parsedReport = parseDeviceReport(statusResponse);
+
+		const currentReading = parsedReport.baseReadings.current;
+
+		const { min, max } = LED_CURRENT_THRESHOLDS[color];
+        const isLedOn = currentReading >= min && currentReading <= max;
 
 		testReport.leds[color] = {
 			...testReport.leds[color],
-			backup: response,
+			backup: isLedOn,
 		};
 		await sendCommand("L0");
 		await sendCommand("P0");
+		console.log(`BACKUP LED ${color} test result: ${isLedOn ? "ON" : "OFF"} (Current: ${currentReading}mA)`);
 	} catch (error) {
 		console.error(`Error testing ${color} LED:`, error);
 	}
 }
 
-async function flashLedColors(color: keyof typeof LedColors) {
-	try {
-		await sendCommand(LedColors[color]);
-		await sendCommand("FA");
-		const response = await showFeedback(
-			`Is the flash ${color} LED flashing?`
-		);
-
-		testReport.leds[color] = {
-			...testReport.leds[color],
-			flash: response,
-		};
-	} catch (error) {
-		console.error(`Error testing ${color} LED:`, error);
-	}
-}
-
-async function testDeepSwitch(switchN: number) {
+async function testAllDipSwitches() {
 	try {
 		isQuestion.value = false;
+		console.log("Testing all dip switches...");
+		// Read the initial state of all switches
 		const initialResponse = await sendCommand(DeviceCommands.READ_STATUS);
 		const initialState = parseDeviceReport(initialResponse);
-		const initialSwitchState = initialState.dipSwitches[switchN];
+		console.log(initialState);
+		const initialDipSwitches = { ...initialState.dipSwitches };
 
-		const userResponse = await showFeedback(
-			`Please change the position of switch ${switchN}.`
-		);
+		// Ask the user to change ALL switches
+		await showFeedback("Please change the position of ALL dip switches.");
 
+		// Read the updated state of all switches
 		const updatedResponse = await sendCommand(DeviceCommands.READ_STATUS);
 		const updatedState = parseDeviceReport(updatedResponse);
-		const updatedSwitchState = updatedState.dipSwitches[switchN];
+		const updatedDipSwitches = { ...updatedState.dipSwitches };
 
-		if (initialSwitchState !== updatedSwitchState) {
-			testReport.dipSwitches[switchN] = true;
-		} else {
-			testReport.dipSwitches[switchN] = false;
+		// Compare and store results
+		for (const sw of Object.keys(initialDipSwitches).map(Number)) {
+			testReport.dipSwitches[sw] =
+				initialDipSwitches[sw] !== updatedDipSwitches[sw];
 		}
+
 		isQuestion.value = true;
 	} catch (error) {
-		console.error(`Error testing switch ${switchN}:`, error);
+		console.error("Error testing dip switches:", error);
 	}
 }
 
@@ -535,44 +548,42 @@ async function startTest() {
 	try {
 		logs.value = [];
 		testCompleted.value = false;
-		// await sendCommand(DeviceCommands.SELECT_DEVICE + "0");
+		await sendCommand(DeviceCommands.SELECT_DEVICE + "0");
 
-		// const response = await sendCommand(DeviceCommands.READ_STATUS);
-		// const report = parseDeviceReport(response);
-		// testReport.gdSnr = report.gdSnr;
-		// GDSnrInTest.value = testReport.gdSnr.slice(1);
+		const response = await sendCommand(DeviceCommands.READ_STATUS);
+		const report = parseDeviceReport(response);
+		testReport.gdSnr = report.gdSnr;
+		GDSnrInTest.value = testReport.gdSnr.slice(1);
 
 		// // LEDs Test
-		// for (const color of Object.keys(LedColors) as Array<
-		// 	keyof typeof LedColors
-		// >) {
-		// 	await testLedColors(color);
-		// 	await testBackupLeds(color);
-		// 	await sendCommand("L0");
-		// }
-		// testPassed.value.leds = Object.values(testReport.leds).every(
-		// 	(led) => led.on && led.backup
-		// );
+		for (const color of Object.keys(LedColors) as Array<
+			keyof typeof LedColors
+		>) {
+			await testLedColors(color);
+			await testBackupLeds(color);
+			await sendCommand("L0");
+		}
+		testPassed.value.leds = Object.values(testReport.leds).every(
+			(led) => led.on && led.backup
+		);
 
-		// // Dip Switches Test
-		// for (const sw of Object.keys(testReport.dipSwitches).map(Number)) {
-		// 	await testDeepSwitch(sw);
-		// }
-		// testPassed.value.dipSwitches = Object.values(
-		// 	testReport.dipSwitches
-		// ).every(Boolean);
+		// Dip Switches Test
+		await testAllDipSwitches();
+		testPassed.value.dipSwitches = Object.values(
+			testReport.dipSwitches
+		).every(Boolean);
 
 		// // Control Signals Test
-		// for (const sw of Object.keys(testReport.ctrlSignal).map(Number)) {
-		// 	await testCtrlSignal(sw);
-		// }
-		// testPassed.value.ctrlSignals = Object.values(
-		// 	testReport.ctrlSignal
-		// ).every(Boolean);
+		for (const sw of Object.keys(testReport.ctrlSignal).map(Number)) {
+			await testCtrlSignal(sw);
+		}
+		testPassed.value.ctrlSignals = Object.values(
+			testReport.ctrlSignal
+		).every(Boolean);
 
 		// // Door Sensor Test
-		// await testDoorSensor();
-		// testPassed.value.doorSensor = testReport.doorSignal;
+		await testDoorSensor();
+		testPassed.value.doorSensor = testReport.doorSignal;
 
 		// await sendCommand(DeviceCommands.SET_LED_STATE + 0);
 		testCompleted.value = true;
@@ -613,8 +624,18 @@ async function saveTestReport() {
 
 async function printLabel(gdSnr: string) {
 	try {
+		// const response = await fetch(
+		// 	"https://top-dane-clearly.ngrok-free.app/print",
+		// 	{
+		// 		method: "POST",
+		// 		headers: {
+		// 			"Content-Type": "application/json",
+		// 		},
+		// 		body: JSON.stringify({ text: gdSnr }),
+		// 	}
+		// );
 		const response = await fetch(
-			"https://top-dane-clearly.ngrok-free.app/print",
+			"http://label-server.bstuff:6000/print",
 			{
 				method: "POST",
 				headers: {
